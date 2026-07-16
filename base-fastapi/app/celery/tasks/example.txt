@@ -1,0 +1,17 @@
+import asyncio
+
+from app.celery.celery import app, run_async
+
+
+async def fake_task():
+    await asyncio.sleep(1)
+
+
+@app.task
+def add(x: int, y: int) -> int:
+    return x + y
+
+
+@app.task
+def fake_task_async() -> None:
+    run_async(fake_task())

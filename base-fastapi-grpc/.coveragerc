@@ -1,0 +1,11 @@
+[run]
+omit =
+    */__init__.py
+    app/main.py
+    app/rpc/generated/*
+
+[report]
+omit =
+    */__init__.py
+    app/main.py
+    app/rpc/generated/*

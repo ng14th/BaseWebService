@@ -1,0 +1,10 @@
+[
+  "tests/test_channel.py::test_channel_pool_requires_positive_size",
+  "tests/test_channel.py::test_channel_pool_round_robin_and_close",
+  "tests/test_health.py::test_health_service_returns_serving",
+  "tests/test_health.py::test_health_servicer_delegates_to_service",
+  "tests/test_server.py::test_run_server_shuts_down_telemetry",
+  "tests/test_server.py::test_server_and_client_health_check",
+  "tests/test_server.py::test_server_registers_signal_handlers",
+  "tests/test_server.py::test_server_stops_after_termination"
+]

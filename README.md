@@ -1,55 +1,79 @@
-# STEP 1 :
-## Do this one time when you clone source
- - THIS PROJECT USING POETRY TO MANAGE LIBRARY
-- Install poetry, require python version >= 3.10
- ```
-    curl -sSL https://install.python-poetry.org | python3.10 -
- ```
-- Config poetry to create env 
-```
-    $ chmod +x ./scripts/*.sh
-    $ ./scripts/initialize_project.sh
-```
-# STEP 2 :
-## If you done Step 1 
-- Activate venv poetry :
-```
-    $ source .venv/bin/activate
-```
-- Run App
-```
-    $ ./scripts/run_app.sh
-```
-- Run Celery Worker 
-```
-    $ ./scripts/run_celery_worker.sh
-```
-- Run Celery Beat
-```
-    $ ./scripts/run_celery_beat.sh
-```
-- Run Celery Flower
-```
-    $ ./scripts/run_celery_flower.sh
-```
-## For install new libary 
-- Use method add of poetry
-```
-    $ poetry add "lib"
-    Example
-    $ poetry add socketio
+# Base Service Templates
+
+This repository provides three reusable `my-app` templates. Copy the template
+that matches the new service boundary, rename `my-app` values, then initialize
+its Poetry environment.
+
+| Template | Use when | Main command |
+| --- | --- | --- |
+| [`base-fastapi`](base-fastapi/README.md) | The service exposes HTTP APIs and uses the standard FastAPI infrastructure. | `make start` |
+| [`base-fastapi-grpc`](base-fastapi-grpc/README.md) | The service exposes HTTP APIs and calls upstream services through gRPC. | `make start`, `make proto` |
+| [`base-grpc-server`](base-grpc-server/README.md) | The service exposes gRPC contracts directly and does not need FastAPI. | `make start-grpc-server`, `make proto` |
+
+## Choose A Template
+
+### FastAPI
+
+Use [`base-fastapi`](base-fastapi/README.md) for REST/HTTP services. It includes
+FastAPI, database and Redis infrastructure, Celery, observability, coverage,
+and pre-commit checks.
+
+- [English README](base-fastapi/README.md)
+- [Vietnamese README](base-fastapi/README.vi.md)
+
+```bash
+cp -R base-fastapi ../my-app
+cd ../my-app
+cp app/env.example app/.env
+make init-project
+make start
 ```
 
-# AFTER RUN APP
-- Access http://172.27.230.25:8000/
+### FastAPI gRPC Gateway
+
+Use [`base-fastapi-grpc`](base-fastapi-grpc/README.md) when an HTTP API needs a
+gRPC client. It adds protobuf generation, an asynchronous channel pool, gRPC
+metadata propagation, and the `GET /api/v1/health/grpc` reference flow.
+
+- [English README](base-fastapi-grpc/README.md)
+- [Vietnamese README](base-fastapi-grpc/README.vi.md)
+
+```bash
+cp -R base-fastapi-grpc ../my-app
+cd ../my-app
+cp app/env.example app/.env
+make init-project
+make proto
+make start
 ```
-    If see {"message":"Hello World"} --> correct 
+
+### gRPC Server
+
+Use [`base-grpc-server`](base-grpc-server/README.md) for a standalone gRPC
+service. It includes protobuf generation, generated stubs, service and
+servicer layers, a reusable gRPC client, graceful shutdown, and optional OTLP
+instrumentation.
+
+- [English README](base-grpc-server/README.md)
+- [Vietnamese README](base-grpc-server/README.vi.md)
+
+```bash
+cp -R base-grpc-server ../my-app
+cd ../my-app
+cp app/env.example app/.env
+make init-project
+make proto
+make start-grpc-server
 ```
-- Access http://172.27.230.25:8000/docs 
+
+## Shared Checks
+
+Each template provides the same basic verification workflow:
+
+```bash
+poetry check
+make test
+poetry run pre-commit run --all-files
 ```
-    See all method of project 
-```
-- Access http://172.27.230.25:8090/ 
-```
-    See Task Process of Celery
-```
+
+`make test` creates coverage and pytest HTML reports in `tests/htmlcov/`.
