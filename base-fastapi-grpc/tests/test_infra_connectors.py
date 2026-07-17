@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from app.infra.connectors.base_client import BaseAsyncHttpConnector, ConnectorConfig
-from app.infra.connectors.concurrency import get_http_call_semaphore
-from app.infra.connectors.custom_response import CustomResponse
-from app.infra.connectors.http_client_manager import HttpClientManager
+from core.infra.connectors.base_client import BaseAsyncHttpConnector, ConnectorConfig
+from core.infra.connectors.concurrency import get_http_call_semaphore
+from core.infra.connectors.custom_response import CustomResponse
+from core.infra.connectors.http_client_manager import HttpClientManager
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +58,7 @@ class TestHttpClientManager:
 
 class TestConcurrency:
     def test_get_http_call_semaphore_singleton(self):
-        import app.infra.connectors.concurrency as conc_module
+        import core.infra.connectors.concurrency as conc_module
         conc_module._HTTP_CALL_SEMAPHORE = None
         s1 = get_http_call_semaphore()
         s2 = get_http_call_semaphore()

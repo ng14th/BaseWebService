@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.infra.connectors.safe_logging import (
+from core.infra.connectors.safe_logging import (
     is_sensitive_key,
     redact_and_truncate,
     redact_sensitive_data,

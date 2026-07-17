@@ -1,4 +1,4 @@
-from app.infra.connectors.safe_logging import redact_and_truncate
+from core.infra.connectors.safe_logging import redact_and_truncate
 
 
 def test_redact_and_truncate_set_tuple():

@@ -2,9 +2,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.rpc.generated.health import health_pb2
-from app.rpc.servicers.health import HealthServicer
-from app.rpc.services.health import HealthService
+from core.grpc_server.generated.health import health_pb2
+from core.grpc_server.servicers.health import HealthServicer
+from core.grpc_server.services.health import HealthService
 
 
 @pytest.mark.asyncio

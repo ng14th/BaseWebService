@@ -8,14 +8,14 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 
-from app.api.common.rate_limit import RateLimitExceeded
+from core.rate_limiter.rate_limit import RateLimitExceeded
 from app.api.router import api_router
-from app.lifespan import lifespan_setup
-from app.log import configure_logging
-from app.middlewares.log_request import LogRequestMiddleware
-from app.middlewares.request_size import RequestSizeLimitMiddleware
-from app.schemas.exception import ErrorResponseException
-from app.schemas.response import ApiResponse
+from core.fastapi_server.lifespan import lifespan_setup
+from core.logging.log import configure_logging
+from core.middlewares.log_request import LogRequestMiddleware
+from core.middlewares.request_size import RequestSizeLimitMiddleware
+from core.schemas.server.exception import ErrorResponseException
+from core.schemas.server.response import ApiResponse
 from app.settings import settings
 
 

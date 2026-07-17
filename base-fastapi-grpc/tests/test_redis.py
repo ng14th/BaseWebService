@@ -4,8 +4,8 @@ import pytest
 from fastapi import FastAPI, Request
 from redis.asyncio import ConnectionPool
 
-from app.infra.redis.client import RedisCacheClient, init_redis, shutdown_redis_client
-from app.infra.redis.dependency import get_redis_pool
+from core.infra.redis.client import RedisCacheClient, init_redis, shutdown_redis_client
+from core.infra.redis.dependency import get_redis_pool
 from app.settings import settings
 
 

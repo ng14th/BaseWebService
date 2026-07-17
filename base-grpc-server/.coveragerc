@@ -2,12 +2,12 @@
 omit =
     */__init__.py
     app/__main__.py
-    app/infra/*
-    app/rpc/generated/*
+    core/infra/*
+    core/grpc_server/generated/*
 
 [report]
 omit =
     */__init__.py
     app/__main__.py
-    app/infra/*
-    app/rpc/generated/*
+    core/infra/*
+    core/grpc_server/generated/*

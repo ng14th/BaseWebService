@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import MagicMock
 
-from app.infra.connectors.custom_response import CustomResponse
+from core.infra.connectors.custom_response import CustomResponse
 
 
 def _make_mock_response(status_code=200, json_data=None, text="", is_success=True):

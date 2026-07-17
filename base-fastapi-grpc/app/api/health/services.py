@@ -1,8 +1,8 @@
 import grpc
 
 from app.api.common.grpc import grpc_error_response
-from app.rpc.generated.health import health_pb2, health_pb2_grpc
-from app.schemas.response import ApiResponse
+from core.grpc_client.generated.health import health_pb2, health_pb2_grpc
+from core.schemas.server.response import ApiResponse
 from app.settings import settings
 
 

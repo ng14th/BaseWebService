@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.rpc.client import GrpcHealthClient
-from app.rpc.server import GrpcServer, run_server
+from core.grpc_server.client import GrpcHealthClient
+from core.grpc_server.server import GrpcServer, run_server
 
 
 @pytest.mark.asyncio
@@ -47,7 +47,7 @@ async def test_server_registers_signal_handlers() -> None:
         callback()
 
     loop.add_signal_handler.side_effect = add_signal_handler
-    with patch("app.rpc.server.asyncio.get_running_loop", return_value=loop):
+    with patch("core.grpc_server.server.asyncio.get_running_loop", return_value=loop):
         await server.serve()
 
     assert loop.add_signal_handler.call_count == 2
@@ -57,10 +57,10 @@ async def test_server_registers_signal_handlers() -> None:
 @pytest.mark.asyncio
 async def test_run_server_shuts_down_telemetry() -> None:
     with (
-        patch("app.rpc.server.configure_logging"),
-        patch("app.rpc.server.setup_opentelemetry"),
-        patch("app.rpc.server.shutdown_opentelemetry") as shutdown,
-        patch("app.rpc.server.GrpcServer") as grpc_server,
+        patch("core.grpc_server.server.configure_logging"),
+        patch("core.grpc_server.server.setup_opentelemetry"),
+        patch("core.grpc_server.server.shutdown_opentelemetry") as shutdown,
+        patch("core.grpc_server.server.GrpcServer") as grpc_server,
     ):
         grpc_server.return_value.serve = AsyncMock()
 

@@ -2,8 +2,8 @@ from fastapi import Request, status
 
 from app.api.common.grpc import build_grpc_metadata
 from app.api.health.services import GrpcHealthService
-from app.rpc.generated.health import health_pb2_grpc
-from app.schemas.exception import ErrorResponseException
+from core.grpc_client.generated.health import health_pb2_grpc
+from core.schemas.server.exception import ErrorResponseException
 
 
 def get_health_service_stub(

@@ -1,7 +1,7 @@
 import grpc
 from fastapi import Request
 
-from app.schemas.exception import ErrorResponseException
+from core.schemas.server.exception import ErrorResponseException
 
 GRPC_HTTP_STATUS_CODE_MAP: dict[grpc.StatusCode, int] = {
     grpc.StatusCode.DEADLINE_EXCEEDED: 504,

@@ -20,12 +20,12 @@ init-project:
 .PHONY: start server dev
 
 start:
-	$(POETRY_RUN) python -m app
+	$(POETRY_RUN) python -m app.main
 
 server: start
 
 dev:
-	RELOAD=True $(POETRY_RUN) python -m app
+	RELOAD=True $(POETRY_RUN) python -m app.main
 
 # ---------------------------------------
 # Scope: Celery

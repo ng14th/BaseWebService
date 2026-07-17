@@ -6,11 +6,11 @@ from typing import Any, Awaitable
 from celery import Celery
 from celery.signals import worker_init, worker_process_init, worker_process_shutdown
 
-from app.db.lifespan import dispose_engines
-from app.infra.otelemetry import setup_opentelemetry
-from app.infra.redis.client import init_redis, shutdown_redis_client
-from app.infra.system_log.mongo import MongoClientSingleton
-from app.log import configure_logging
+from core.db.lifespan import dispose_engines
+from core.infra.otelemetry import setup_opentelemetry
+from core.infra.redis.client import init_redis, shutdown_redis_client
+from core.infra.system_log.mongo import MongoClientSingleton
+from core.logging.log import configure_logging
 from app.settings import settings
 
 app = Celery(settings.celery_app_name)
@@ -50,7 +50,7 @@ _BOOTSTRAPPED_PIDS: set[int] = set()
 
 
 def init_db() -> None:
-    from app.db.engine_routing import READ_ENGINE, WRITE_ENGINE  # noqa
+    from core.db.engine_routing import READ_ENGINE, WRITE_ENGINE  # noqa
 
 
 def get_worker_loop() -> asyncio.AbstractEventLoop:

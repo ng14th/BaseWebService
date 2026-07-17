@@ -1,6 +1,6 @@
 from fastapi import Request, status
 
-from app.schemas.exception import ErrorResponseException
+from core.schemas.server.exception import ErrorResponseException
 
 
 def check_required_auth_header(request: Request):

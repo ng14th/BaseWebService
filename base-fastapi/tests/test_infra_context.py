@@ -1,5 +1,5 @@
 """Tests for app/infra/connectors/context.py"""
-from app.infra.connectors.context import grpc_deadline_remaining
+from core.infra.connectors.context import grpc_deadline_remaining
 
 
 def test_grpc_deadline_remaining_default():

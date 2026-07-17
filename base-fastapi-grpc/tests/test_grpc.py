@@ -14,15 +14,15 @@ from app.api.health.dependencies import (
 )
 from app.api.health.services import GrpcHealthService
 from app.api.application import get_app
-from app.rpc.channel import GrpcChannelPool
-from app.rpc.lifespan import setup_grpc_client, shutdown_grpc_client
-from app.rpc.generated.health import health_pb2, health_pb2_grpc
-from app.schemas.exception import ErrorResponseException
+from core.grpc_client.channel import GrpcChannelPool
+from core.grpc_client.lifespan import setup_grpc_client, shutdown_grpc_client
+from core.grpc_client.generated.health import health_pb2, health_pb2_grpc
+from core.schemas.server.exception import ErrorResponseException
 from app.settings import settings
 
 
 def test_generated_health_proto() -> None:
-    from app.rpc.generated.health import health_pb2, health_pb2_grpc
+    from core.grpc_client.generated.health import health_pb2, health_pb2_grpc
 
     response = health_pb2.HealthCheckResponse(status="SERVING")
 

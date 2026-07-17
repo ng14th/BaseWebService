@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, Request
 
 from app.api.common.dependencies import check_required_auth_header
-from app.api.common.rate_limit import rate_limit
+from core.rate_limiter.rate_limit import rate_limit
 from app.api.health.dependencies import (
     get_grpc_health_service,
     get_health_service_stub,
 )
 from app.api.health.services import GrpcHealthService
-from app.rpc.generated.health import health_pb2_grpc
-from app.schemas.response import ApiResponse
+from core.grpc_client.generated.health import health_pb2_grpc
+from core.schemas.server.response import ApiResponse
 
 router = APIRouter(tags=["health"])
 

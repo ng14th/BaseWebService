@@ -4,9 +4,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.common.rate_limit import RateLimitExceeded, RateLimitResult
+from core.rate_limiter.rate_limit import RateLimitExceeded, RateLimitResult
 from app.api.application import get_app
-from app.schemas.exception import ErrorResponseException
+from core.schemas.server.exception import ErrorResponseException
 from app.settings import settings
 
 

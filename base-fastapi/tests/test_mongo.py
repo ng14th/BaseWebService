@@ -7,8 +7,8 @@ from fastapi import Request
 from pydantic import BaseModel
 from starlette.responses import Response
 
-from app.infra.system_log.mongo import MongoClientSingleton, MongoSystemEventLogger
-from app.infra.system_log.tools import (
+from core.infra.system_log.mongo import MongoClientSingleton, MongoSystemEventLogger
+from core.infra.system_log.tools import (
     _parse_response_body,
     _truncate_log_value,
     build_request_query_params,
@@ -32,7 +32,7 @@ def reset_mongo():
 
 @pytest.mark.asyncio
 async def test_mongo_client_singleton():
-    with patch("app.infra.system_log.mongo.AsyncIOMotorClient") as mock_client:
+    with patch("core.infra.system_log.mongo.AsyncIOMotorClient") as mock_client:
         mock_instance = AsyncMock()
         mock_instance.close = MagicMock()
         mock_client.return_value = mock_instance
@@ -51,7 +51,7 @@ async def test_mongo_client_singleton():
 @pytest.mark.asyncio
 async def test_mongo_system_event_logger():
     with patch(
-        "app.infra.system_log.mongo.MongoClientSingleton.get_client"
+        "core.infra.system_log.mongo.MongoClientSingleton.get_client"
     ) as mock_get_client:  # noqa: E501
         mock_client = AsyncMock()
         mock_db = MagicMock()
@@ -173,7 +173,7 @@ def test_serialize_for_log():
 
     # Exceptions
     with patch(
-        "app.infra.system_log.tools.redact_sensitive_data", side_effect=Exception("bad")
+        "core.infra.system_log.tools.redact_sensitive_data", side_effect=Exception("bad")
     ):  # noqa: E501
         assert "MockDataClass" in serialize_for_log(MockDataClass(a=1))
         assert "a=1" in serialize_for_log(MockPydantic(a=1))

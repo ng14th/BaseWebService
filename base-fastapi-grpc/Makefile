@@ -3,8 +3,8 @@
 # ---------------------------------------
 PYTHON         := .venv/bin/python
 POETRY_RUN     := poetry run
-PROTO_SRC_DIR  := app/rpc/proto
-PROTO_OUT_DIR  := app/rpc/generated
+PROTO_SRC_DIR  := core/grpc_client/proto
+PROTO_OUT_DIR  := core/grpc_client/generated
 PROTO_FILES    := $(shell find $(PROTO_SRC_DIR) -name '*.proto')
 #---------------------------------
 # Init
@@ -23,12 +23,12 @@ init-project:
 .PHONY: start server dev
 
 start:
-	$(POETRY_RUN) python -m app
+	$(POETRY_RUN) python -m app.main
 
 server: start
 
 dev:
-	RELOAD=True $(POETRY_RUN) python -m app
+	RELOAD=True $(POETRY_RUN) python -m app.main
 
 # ---------------------------------------
 # Scope: gRPC and protobuf

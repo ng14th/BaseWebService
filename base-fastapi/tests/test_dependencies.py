@@ -3,7 +3,7 @@ from fastapi import Request, status
 from unittest.mock import MagicMock
 
 from app.api.common.dependencies import check_required_auth_header, check_request_id
-from app.schemas.exception import ErrorResponseException
+from core.schemas.server.exception import ErrorResponseException
 
 def test_check_required_auth_header_success():
     request = MagicMock(spec=Request)

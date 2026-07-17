@@ -1,4 +1,4 @@
-from app.tools.redaction import redact_sensitive_data, REDACTED
+from core.logging.redaction import redact_sensitive_data, REDACTED
 
 
 def test_redact_sensitive_data_primitives():

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi import FastAPI, Request
 
-from app.api.common.rate_limit import (
+from core.rate_limiter.rate_limit import (
     RateLimitExceeded,
     RateLimitResult,
     RedisSlidingWindowRateLimiter,
@@ -168,7 +168,7 @@ async def test_redis_rate_limiter():
     assert mock_pipe.execute.call_count == 2
 
     # Test WatchError raise (exceed retries)
-    with patch("app.api.common.rate_limit.settings") as mock_settings:
+    with patch("core.rate_limiter.rate_limit.settings") as mock_settings:
         mock_settings.rate_limit_watch_retries = 2
         mock_pipe.execute = AsyncMock(side_effect=WatchError("watch error"))
         with pytest.raises(WatchError):
@@ -179,7 +179,7 @@ def test_init_rate_limiter():
     app = MagicMock(spec=FastAPI)
     app.state = MagicMock()
 
-    with patch("app.api.common.rate_limit.settings") as mock_settings:
+    with patch("core.rate_limiter.rate_limit.settings") as mock_settings:
         mock_settings.rate_limit_enabled = False
         init_rate_limiter(app)
         assert app.state.rate_limiter_store is None
@@ -212,7 +212,7 @@ def test_get_client_ip(mock_request):
     mock_request.headers = {}
     assert _get_client_ip(mock_request, trust_proxy_headers=False) == "127.0.0.1"
 
-    with patch("app.api.common.rate_limit.settings") as mock_settings:
+    with patch("core.rate_limiter.rate_limit.settings") as mock_settings:
         # Test untrusted proxy IP
         mock_settings.trusted_proxy_ips = ["192.168.1.1"]
         mock_request.client.host = "10.0.0.5"  # Not in trusted proxy IPs
@@ -234,7 +234,7 @@ def test_get_client_id_identifier(mock_request):
     )  # noqa: E501
 
     # Test max length limit
-    with patch("app.api.common.rate_limit.settings") as mock_settings:
+    with patch("core.rate_limiter.rate_limit.settings") as mock_settings:
         mock_settings.rate_limit_max_identifier_length = 5
         mock_request.headers = {"x-client-id": "too_long_identifier"}
         assert (
@@ -315,7 +315,7 @@ async def test_check_client_id_limit(mock_request):
 
 @pytest.mark.asyncio
 async def test_rate_limit_dependency(mock_request):
-    with patch("app.api.common.rate_limit.settings") as mock_settings:
+    with patch("core.rate_limiter.rate_limit.settings") as mock_settings:
         mock_settings.rate_limit_enabled = False
         dep = rate_limit()
         await dep(mock_request)

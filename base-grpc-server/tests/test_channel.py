@@ -1,6 +1,6 @@
 import pytest
 
-from app.rpc.channel import GrpcChannelPool
+from core.grpc_server.channel import GrpcChannelPool
 
 
 @pytest.mark.asyncio

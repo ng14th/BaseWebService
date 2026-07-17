@@ -11,7 +11,7 @@ init-project:
 	$(POETRY_RUN) pre-commit install-hooks
 
 start-grpc-server:
-	$(POETRY_RUN) python -m app.rpc.server
+	$(POETRY_RUN) python -m core.grpc_server.server
 
 proto: proto-gen
 
