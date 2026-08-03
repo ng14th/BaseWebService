@@ -1,6 +1,9 @@
-POETRY_RUN := poetry run
-PROTO_SRC_DIR := app/rpc/proto
-PROTO_OUT_DIR := app/rpc/generated
+CORE_DIR ?= $(shell if [ -d ../core ]; then printf "../core"; else printf "core"; fi)
+CORE_ROOT ?= $(shell dirname "$(CORE_DIR)")
+PYTHONPATH := .:$(CORE_ROOT)
+POETRY_RUN := PYTHONPATH=$(PYTHONPATH) poetry run
+PROTO_SRC_DIR := $(CORE_DIR)/grpc_server/proto
+PROTO_OUT_DIR := $(CORE_DIR)/grpc_server/generated
 PROTO_FILES := $(shell find $(PROTO_SRC_DIR) -name '*.proto')
 
 .PHONY: init-project start-grpc-server proto proto-gen fix-proto-imports test open-test-coverage

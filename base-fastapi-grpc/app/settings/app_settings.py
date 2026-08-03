@@ -9,6 +9,7 @@ from yarl import URL
 
 from app.settings.app_security import Security
 from app.settings.celery_setting import CelerySetting
+from app.settings.circuit_breaker_setting import CircuitBreakerSetting
 from app.settings.db_setting import DatabaseSetting
 from app.settings.gunicorn_settings import GunicornSetting
 from app.settings.grpc_setting import GrpcSetting
@@ -39,11 +40,13 @@ class Settings(
     RedisSetting,
     MongoSetting,
     CelerySetting,
+    CircuitBreakerSetting,
     RateLimitSetting,
 ):
     host: str = "127.0.0.1"
     port: int = 8000
     reload: bool = False
+    service_name: str = "my-app"
 
     environment: str = "dev"
     log_level: LogLevel = LogLevel.INFO

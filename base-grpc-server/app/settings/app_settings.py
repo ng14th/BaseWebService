@@ -12,6 +12,8 @@ class LogLevel(str, enum.Enum):
 
 
 class Settings(BaseSettings):
+    service_name: str = "my-app-grpc-server"
+
     environment: str = "dev"
     log_level: LogLevel = LogLevel.INFO
 

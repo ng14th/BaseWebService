@@ -9,6 +9,8 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+ARG APP_DIR=.
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
@@ -16,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml poetry.lock ./
+COPY ${APP_DIR}/pyproject.toml ${APP_DIR}/poetry.lock ./
 RUN poetry install --no-interaction --no-ansi --no-root --only main
 
 # ---- Runtime ----
@@ -29,6 +31,8 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+ARG APP_DIR=.
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     curl \
@@ -40,7 +44,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN addgroup --system app && adduser --system --ingroup app app
 
 COPY --from=builder /app/.venv /app/.venv
-COPY app /app/app
+COPY ${APP_DIR}/app /app/app
+COPY core /app/core
 
 USER app
 

@@ -1,12 +1,12 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import FastAPI, Request
+from fastapi import Request
 from redis.asyncio import ConnectionPool
 
-from core.infra.redis.client import RedisCacheClient, init_redis, shutdown_redis_client
-from core.infra.redis.dependency import get_redis_pool
-from app.settings import settings
+from core.infra.redis.client import RedisCacheClient
+from core.infra.redis.dependency import get_redis_client
+from core.infra.redis.lifespan import shutdown_redis_client
 
 
 def test_redis_cache_client_bind_pool():
@@ -48,12 +48,12 @@ async def test_redis_cache_client_get_and_close():
 
 
 @pytest.mark.asyncio
-async def test_get_redis_pool():
+async def test_get_redis_client():
     request = MagicMock(spec=Request)
     app = MagicMock()
-    pool = MagicMock(spec=ConnectionPool)
-    app.state.redis_pool = pool
+    client = MagicMock()
+    app.state.redis_client = client
     request.app = app
 
-    gen = await get_redis_pool(request)
-    assert gen is pool
+    gen = await get_redis_client(request)
+    assert gen is client

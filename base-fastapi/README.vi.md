@@ -21,10 +21,23 @@ FastAPI service template cho my-app.
 - `app/api`: Định nghĩa các HTTP route và cấu hình FastAPI application.
 - `app/domain`: Các domain entity và repository contract.
 - `app/infra`: Các adapter hạ tầng, bao gồm outbound connector.
-- `app/db`: Cấu hình SQLAlchemy async database và session helper.
-- `app/db/models`: Để trống để bạn tự tạo model.
+- `app/db_models/models`: SQLAlchemy model. `common.py` có sẵn timestamp và audit mixin.
+- `app/db_models/migrations`: Alembic migration environment.
 - `app/tools`: Công cụ tiện ích (VD: tạo PDF).
+- `../core` hoặc `core`: Hạ tầng dùng chung theo chuẩn `onflow-e-invoice/core`.
 - `tests/`: Chứa các test unit và integration cho dự án.
+
+## Shared Core
+
+Template này không còn chứa `core/` riêng bên trong base. Khi làm việc trong
+repo `webapp_FastAPI`, Makefile tự load `../core`. Khi tạo service độc lập, copy
+kèm shared core vào root của service:
+
+```bash
+cp -R ../webapp_FastAPI/base-fastapi ../my-app
+cp -R ../webapp_FastAPI/core ../my-app/core
+cd ../my-app
+```
 
 ## Lệnh khởi chạy (Makefile)
 
@@ -57,3 +70,17 @@ Các endpoint có sẵn khi chạy:
 - `GET /`
 - `GET /api/v1/health`
 - `GET /api/docs`
+
+## Docker
+
+Từ root `webapp_FastAPI`:
+
+```bash
+docker build -f base-fastapi/Dockerfile --build-arg APP_DIR=base-fastapi -t my-app .
+```
+
+Từ service độc lập đã copy, có `app/`, `core/` và `Dockerfile` cùng cấp:
+
+```bash
+docker build -t my-app .
+```

@@ -2,10 +2,16 @@
 omit =
     */__init__.py
     app/main.py
+    */core/infra/storage/*
     core/grpc_client/generated/*
+    */core/grpc_client/generated/*
+    */core/grpc_server/generated/*
 
 [report]
 omit =
     */__init__.py
     app/main.py
+    */core/infra/storage/*
     core/grpc_client/generated/*
+    */core/grpc_client/generated/*
+    */core/grpc_server/generated/*

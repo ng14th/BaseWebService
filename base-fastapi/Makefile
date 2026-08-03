@@ -2,7 +2,10 @@
 # Global
 # ---------------------------------------
 PYTHON         := .venv/bin/python
-POETRY_RUN     := poetry run
+CORE_DIR       ?= $(shell if [ -d ../core ]; then printf "../core"; else printf "core"; fi)
+CORE_ROOT      ?= $(shell dirname "$(CORE_DIR)")
+PYTHONPATH     := .:$(CORE_ROOT)
+POETRY_RUN     := PYTHONPATH=$(PYTHONPATH) poetry run
 #---------------------------------
 # Init
 # --------------------------------

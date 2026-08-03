@@ -100,3 +100,17 @@ class TestCustomResponse:
         mock_resp = _make_mock_response()
         cr = CustomResponse(response=mock_resp, execute_time_ms=50, source_service="svc")
         assert cr.timeout_msg_error is None
+
+    def test_circuit_open_msg_error_returns_message_when_open(self):
+        cr = CustomResponse(
+            response=None,
+            execute_time_ms=50,
+            source_service="MySvc",
+            is_circuit_open=True,
+        )
+        assert "MySvc" in cr.circuit_open_msg_error
+
+    def test_circuit_open_msg_error_returns_none_when_not_open(self):
+        mock_resp = _make_mock_response()
+        cr = CustomResponse(response=mock_resp, execute_time_ms=50, source_service="svc")
+        assert cr.circuit_open_msg_error is None

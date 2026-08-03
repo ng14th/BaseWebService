@@ -21,13 +21,26 @@ FastAPI service template có tích hợp gRPC client cho my-app.
 - `app/api`: Định nghĩa các HTTP route và cấu hình FastAPI application.
 - `app/domain`: Các domain entity và repository contract.
 - `app/infra`: Các adapter hạ tầng, bao gồm outbound connector.
-- `app/db`: Cấu hình SQLAlchemy async database và session helper.
-- `app/db/models`: Để trống để bạn tự tạo model.
+- `app/db_models/models`: SQLAlchemy model. `common.py` có sẵn timestamp và audit mixin.
+- `app/db_models/migrations`: Alembic migration environment.
 - `app/tools`: Công cụ tiện ích (VD: tạo PDF).
-- `app/rpc/proto`: Các protobuf contract nguồn, được nhóm theo domain.
-- `app/rpc/generated`: Mã Python protobuf và gRPC stub sinh từ `app/rpc/proto`.
-- `app/rpc/channel.py`: Channel pool gRPC bất đồng bộ có thể tái sử dụng.
+- `../core` hoặc `core`: Hạ tầng dùng chung theo chuẩn `onflow-e-invoice/core`.
+- `core/grpc_client/proto`: Protobuf contract nguồn cho upstream gRPC client.
+- `core/grpc_client/generated`: Mã Python protobuf và gRPC stub sinh từ `core/grpc_client/proto`.
+- `core/grpc_client/channel.py`: Channel pool gRPC bất đồng bộ có thể tái sử dụng.
 - `tests/`: Chứa các test unit và integration cho dự án.
+
+## Shared Core
+
+Template này không còn chứa `core/` riêng bên trong base. Khi làm việc trong
+repo `webapp_FastAPI`, Makefile tự load `../core`. Khi tạo service độc lập, copy
+kèm shared core vào root của service:
+
+```bash
+cp -R ../webapp_FastAPI/base-fastapi-grpc ../my-app
+cp -R ../webapp_FastAPI/core ../my-app/core
+cd ../my-app
+```
 
 ## Lệnh khởi chạy (Makefile)
 
@@ -50,8 +63,8 @@ Bạn có thể chạy các lệnh sau với `make`:
   make proto
   ```
   Sinh mã Python, type stub và gRPC từ mọi file `.proto` trong
-  `app/rpc/proto`. Import của mã sinh được chuẩn hóa theo package
-  `app.rpc.generated`.
+  `core/grpc_client/proto`. Import của mã sinh được chuẩn hóa theo package
+  `core.grpc_client.generated`.
 
 - **Mở báo cáo Coverage**:
   ```bash
@@ -66,9 +79,9 @@ Xem `app/env.example` để cấu hình DB, HTTP connector, FastAPI, gRPC và mo
 
 ## gRPC
 
-Template có sẵn contract tối giản `app/rpc/proto/health/health.proto`. Thêm
-contract mới dưới `app/rpc/proto`, chạy `make proto`, sau đó commit các file
-tương ứng trong `app/rpc/generated`.
+Template có sẵn contract tối giản `core/grpc_client/proto/health/health.proto`.
+Thêm contract mới dưới `core/grpc_client/proto`, chạy `make proto`, sau đó
+commit các file tương ứng trong `core/grpc_client/generated`.
 
 Để bật channel pool gRPC dùng chung, cấu hình target:
 
@@ -100,3 +113,17 @@ Các endpoint có sẵn khi chạy:
 - `GET /`
 - `GET /api/v1/health`
 - `GET /api/docs`
+
+## Docker
+
+Từ root `webapp_FastAPI`:
+
+```bash
+docker build -f base-fastapi-grpc/Dockerfile --build-arg APP_DIR=base-fastapi-grpc -t my-app .
+```
+
+Từ service độc lập đã copy, có `app/`, `core/` và `Dockerfile` cùng cấp:
+
+```bash
+docker build -t my-app .
+```

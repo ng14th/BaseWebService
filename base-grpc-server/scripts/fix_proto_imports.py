@@ -6,7 +6,7 @@ from pathlib import Path
 def main() -> int:
     proto_out_dir = Path(sys.argv[1])
     proto_src_dir = Path(sys.argv[2])
-    prefix = ".".join(proto_out_dir.parts)
+    prefix = package_prefix(proto_out_dir)
     roots = [directory.name for directory in proto_src_dir.iterdir() if directory.is_dir()]
 
     for pattern in ("*_pb2.py", "*_pb2.pyi", "*_pb2_grpc.py"):
@@ -27,6 +27,14 @@ def main() -> int:
                 )
             file_path.write_text(content, encoding="utf-8")
     return 0
+
+
+def package_prefix(path: Path) -> str:
+    parts = path.parts
+    for marker in ("core", "app"):
+        if marker in parts:
+            return ".".join(parts[parts.index(marker):])
+    return ".".join(part for part in parts if part not in (".", ".."))
 
 
 if __name__ == "__main__":

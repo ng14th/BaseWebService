@@ -21,10 +21,23 @@ FastAPI service template for my-app.
 - `app/api`: HTTP routes and FastAPI application wiring.
 - `app/domain`: Domain entities and repository contracts.
 - `app/infra`: Infrastructure adapters such as outbound connectors.
-- `app/db`: SQLAlchemy async database configuration and session helpers.
-- `app/db/models`: Intentionally empty. Add database models here when needed.
+- `app/db_models/models`: SQLAlchemy models. `common.py` provides timestamp and audit mixins.
+- `app/db_models/migrations`: Alembic migration environment.
 - `app/tools`: Utility tools (e.g., PDF generation).
+- `../core` or `core`: Shared infrastructure based on `onflow-e-invoice/core`.
 - `tests/`: Project unit and integration tests.
+
+## Shared Core
+
+This template no longer contains its own `core/` directory. Inside
+`webapp_FastAPI`, commands load `../core` automatically. For a standalone
+service, copy the shared core into the service root:
+
+```bash
+cp -R ../webapp_FastAPI/base-fastapi ../my-app
+cp -R ../webapp_FastAPI/core ../my-app/core
+cd ../my-app
+```
 
 ## Available Commands
 
@@ -57,3 +70,18 @@ Endpoints available upon running:
 - `GET /`
 - `GET /api/v1/health`
 - `GET /api/docs`
+
+## Docker
+
+From the `webapp_FastAPI` root:
+
+```bash
+docker build -f base-fastapi/Dockerfile --build-arg APP_DIR=base-fastapi -t my-app .
+```
+
+From a standalone copied service root containing `app/`, `core/`, and
+`Dockerfile`:
+
+```bash
+docker build -t my-app .
+```

@@ -6,12 +6,12 @@ from typing import Any, Awaitable
 from celery import Celery
 from celery.signals import worker_init, worker_process_init, worker_process_shutdown
 
+from app.settings import settings
 from core.db.lifespan import dispose_engines
 from core.infra.otelemetry import setup_opentelemetry
-from core.infra.redis.client import init_redis, shutdown_redis_client
+from core.infra.redis.lifespan import init_redis, shutdown_redis_client
 from core.infra.system_log.mongo import MongoClientSingleton
 from core.logging.log import configure_logging
-from app.settings import settings
 
 app = Celery(settings.celery_app_name)
 

@@ -21,13 +21,26 @@ FastAPI and gRPC client service template for my-app.
 - `app/api`: HTTP routes and FastAPI application wiring.
 - `app/domain`: Domain entities and repository contracts.
 - `app/infra`: Infrastructure adapters such as outbound connectors.
-- `app/db`: SQLAlchemy async database configuration and session helpers.
-- `app/db/models`: Intentionally empty. Add database models here when needed.
+- `app/db_models/models`: SQLAlchemy models. `common.py` provides timestamp and audit mixins.
+- `app/db_models/migrations`: Alembic migration environment.
 - `app/tools`: Utility tools (e.g., PDF generation).
-- `app/rpc/proto`: Source protobuf contracts, grouped by domain.
-- `app/rpc/generated`: Python protobuf and gRPC stubs generated from `app/rpc/proto`.
-- `app/rpc/channel.py`: Reusable asynchronous gRPC channel pool.
+- `../core` or `core`: Shared infrastructure based on `onflow-e-invoice/core`.
+- `core/grpc_client/proto`: Source protobuf contracts for upstream gRPC clients.
+- `core/grpc_client/generated`: Python protobuf and gRPC stubs generated from `core/grpc_client/proto`.
+- `core/grpc_client/channel.py`: Reusable asynchronous gRPC channel pool.
 - `tests/`: Project unit and integration tests.
+
+## Shared Core
+
+This template no longer contains its own `core/` directory. Inside
+`webapp_FastAPI`, commands load `../core` automatically. For a standalone
+service, copy the shared core into the service root:
+
+```bash
+cp -R ../webapp_FastAPI/base-fastapi-grpc ../my-app
+cp -R ../webapp_FastAPI/core ../my-app/core
+cd ../my-app
+```
 
 ## Available Commands
 
@@ -50,8 +63,8 @@ You can run the following commands using `make`:
   make proto
   ```
   Generates Python, type stub, and gRPC code from every `.proto` file in
-  `app/rpc/proto`. Generated imports are normalized for the `app.rpc.generated`
-  package.
+  `core/grpc_client/proto`. Generated imports are normalized for the
+  `core.grpc_client.generated` package.
 
 - **Open Coverage Report**:
   ```bash
@@ -66,9 +79,10 @@ See `app/env.example` for the DB, HTTP connector, FastAPI, gRPC, and monitoring 
 
 ## gRPC
 
-The template includes `app/rpc/proto/health/health.proto` as a minimal contract.
-Add new contracts below `app/rpc/proto`, then run `make proto` and commit the
-corresponding files from `app/rpc/generated`.
+The template includes `core/grpc_client/proto/health/health.proto` as a minimal
+contract. Add new contracts below `core/grpc_client/proto`, then run
+`make proto` and commit the corresponding files from
+`core/grpc_client/generated`.
 
 To enable the optional shared gRPC client pool, configure a target:
 
@@ -100,3 +114,18 @@ Endpoints available upon running:
 - `GET /`
 - `GET /api/v1/health`
 - `GET /api/docs`
+
+## Docker
+
+From the `webapp_FastAPI` root:
+
+```bash
+docker build -f base-fastapi-grpc/Dockerfile --build-arg APP_DIR=base-fastapi-grpc -t my-app .
+```
+
+From a standalone copied service root containing `app/`, `core/`, and
+`Dockerfile`:
+
+```bash
+docker build -t my-app .
+```

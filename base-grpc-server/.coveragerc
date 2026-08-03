@@ -4,6 +4,8 @@ omit =
     app/__main__.py
     core/infra/*
     core/grpc_server/generated/*
+    */core/infra/*
+    */core/grpc_server/generated/*
 
 [report]
 omit =
@@ -11,3 +13,5 @@ omit =
     app/__main__.py
     core/infra/*
     core/grpc_server/generated/*
+    */core/infra/*
+    */core/grpc_server/generated/*

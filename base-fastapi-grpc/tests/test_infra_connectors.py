@@ -1,11 +1,16 @@
 """Tests for app/infra/connectors/base_client.py, concurrency.py, http_client_manager.py"""  # noqa: E501
 import asyncio
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
 
-from core.infra.connectors.base_client import BaseAsyncHttpConnector, ConnectorConfig
+from core.infra.connectors.base_client import (
+    BaseAsyncHttpConnector,
+    ConnectorConfig,
+    _format_log_body,
+)
 from core.infra.connectors.concurrency import get_http_call_semaphore
 from core.infra.connectors.custom_response import CustomResponse
 from core.infra.connectors.http_client_manager import HttpClientManager
@@ -91,6 +96,11 @@ class TestBaseAsyncHttpConnectorMakeUrl:
         assert conn._config.timeout_s == 5.0
 
 
+def test_format_log_body_truncates_long_values():
+    logged = _format_log_body({"value": "x" * 600}, max_len=20)
+    assert str(logged).endswith("chars]")
+
+
 class TestBaseAsyncHttpConnectorRequest:
     def _make_mock_http_response(self, status_code=200, text='{"ok":true}'):
         mock = MagicMock(spec=httpx.Response)
@@ -108,6 +118,15 @@ class TestBaseAsyncHttpConnectorRequest:
         result = await conn.request(method="GET", path_or_url="http://example.com/test")
         assert isinstance(result, CustomResponse)
         assert result.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_circuit_open_returns_custom_response(self):
+        conn = _make_connector()
+        conn._circuit_breaker.allow_request = AsyncMock(
+            return_value=SimpleNamespace(allowed=False, mode="open")
+        )
+        result = await conn.request(method="GET", path_or_url="http://example.com/test")
+        assert result.is_circuit_open is True
 
     @pytest.mark.asyncio
     async def test_request_with_dict_body(self):

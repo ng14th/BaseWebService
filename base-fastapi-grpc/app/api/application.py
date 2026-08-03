@@ -8,15 +8,17 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 
-from core.rate_limiter.rate_limit import RateLimitExceeded
 from app.api.router import api_router
-from core.fastapi_server.lifespan import lifespan_setup
+from app.constants.mongo_table import TABLE_LOG_API_CALL
+from app.constants.partner import KEY_REQUEST_PARTNER
+from app.settings import settings
+from core.fastapi_server.grpc_lifespan import create_grpc_gateway_lifespan
 from core.logging.log import configure_logging
 from core.middlewares.log_request import LogRequestMiddleware
 from core.middlewares.request_size import RequestSizeLimitMiddleware
+from core.rate_limiter.rate_limit import RateLimitExceeded
 from core.schemas.server.exception import ErrorResponseException
 from core.schemas.server.response import ApiResponse
-from app.settings import settings
 
 
 def get_app() -> FastAPI:
@@ -48,7 +50,7 @@ def get_app() -> FastAPI:
     # init app
     app = FastAPI(
         title="my-app",
-        lifespan=lifespan_setup,
+        lifespan=create_grpc_gateway_lifespan(settings),
         description="my-app FastAPI service",
         docs_url="/api/docs" if settings.docs_enabled else None,
         redoc_url="/api/redoc" if settings.docs_enabled else None,
@@ -56,7 +58,11 @@ def get_app() -> FastAPI:
     )
 
     # app.add_middleware(IdempotencyRequestMiddleware)
-    app.add_middleware(LogRequestMiddleware)
+    app.add_middleware(
+        LogRequestMiddleware,
+        table=TABLE_LOG_API_CALL,
+        request_partner_key=KEY_REQUEST_PARTNER,
+    )
     app.add_middleware(
         RequestSizeLimitMiddleware,
         max_body_bytes=settings.max_request_body_bytes,

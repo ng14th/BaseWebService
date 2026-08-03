@@ -2,7 +2,7 @@
 
 [Vietnamese Version](README.vi.md)
 
-Reusable gRPC-only server template based on the `tms-core/rpc` structure.
+Reusable gRPC-only server template using the shared `core/grpc_server` package.
 
 ## Setup
 
@@ -21,7 +21,7 @@ make open-test-coverage
 ```
 
 `make proto` generates Python protobuf, type stubs, and gRPC stubs from
-`app/rpc/proto`, then rewrites imports for `app.rpc.generated`.
+`core/grpc_server/proto`, then rewrites imports for `core.grpc_server.generated`.
 
 ## Run The gRPC Server
 
@@ -47,14 +47,28 @@ The included health RPC is `my_app.health.v1.HealthService/Check` and returns
 
 ## Structure
 
-- `app/rpc/proto`: protobuf contracts.
-- `app/rpc/generated`: generated protobuf and gRPC code.
-- `app/rpc/servicers`: gRPC request handlers.
-- `app/rpc/services`: application services called by servicers.
-- `app/rpc/channel.py`: reusable asynchronous client channel pool.
-- `app/rpc/client.py`: health client example.
-- `app/rpc/server.py`: server startup and servicer registration.
-- `app/infra/otelemetry.py`: optional OTLP tracing for gRPC server and client.
+- `app/settings`: service configuration and environment loading.
+- `../core` or `core`: shared infrastructure based on `onflow-e-invoice/core`.
+- `core/grpc_server/proto`: protobuf contracts.
+- `core/grpc_server/generated`: generated protobuf and gRPC code.
+- `core/grpc_server/servicers`: gRPC request handlers.
+- `core/grpc_server/services`: application services called by servicers.
+- `core/grpc_server/channel.py`: reusable asynchronous client channel pool.
+- `core/grpc_server/client.py`: health client example.
+- `core/grpc_server/server.py`: server startup and servicer registration.
+- `core/grpc_server/otelemetry.py`: optional OTLP tracing for gRPC server and client.
+
+## Shared Core
+
+This template no longer contains its own `core/` directory. Inside
+`webapp_FastAPI`, commands load `../core` automatically. For a standalone
+service, copy the shared core into the service root:
+
+```bash
+cp -R ../webapp_FastAPI/base-grpc-server ../my-app
+cp -R ../webapp_FastAPI/core ../my-app/core
+cd ../my-app
+```
 
 ## Health Example
 

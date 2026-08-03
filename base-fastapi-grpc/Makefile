@@ -2,9 +2,12 @@
 # Global
 # ---------------------------------------
 PYTHON         := .venv/bin/python
-POETRY_RUN     := poetry run
-PROTO_SRC_DIR  := core/grpc_client/proto
-PROTO_OUT_DIR  := core/grpc_client/generated
+CORE_DIR       ?= $(shell if [ -d ../core ]; then printf "../core"; else printf "core"; fi)
+CORE_ROOT      ?= $(shell dirname "$(CORE_DIR)")
+PYTHONPATH     := .:$(CORE_ROOT)
+POETRY_RUN     := PYTHONPATH=$(PYTHONPATH) poetry run
+PROTO_SRC_DIR  := $(CORE_DIR)/grpc_client/proto
+PROTO_OUT_DIR  := $(CORE_DIR)/grpc_client/generated
 PROTO_FILES    := $(shell find $(PROTO_SRC_DIR) -name '*.proto')
 #---------------------------------
 # Init
