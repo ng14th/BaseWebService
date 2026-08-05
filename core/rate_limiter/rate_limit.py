@@ -6,12 +6,24 @@ import uuid
 from collections import deque
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from typing import Protocol
 
 from fastapi import FastAPI, Request
 from redis.asyncio import Redis
 from redis.exceptions import WatchError
 
-from app.settings import settings
+
+class RateLimitConfig(Protocol):
+    rate_limit_enabled: bool
+    rate_limit_by_ip_enabled: bool
+    rate_limit_ip_requests: int
+    rate_limit_ip_window_seconds: int
+    rate_limit_by_auth_enabled: bool
+    rate_limit_auth_requests: int
+    rate_limit_auth_window_seconds: int
+    rate_limit_trust_proxy_headers: bool
+    trusted_proxy_ips: list[str]
+    rate_limit_watch_retries: int
 
 
 @dataclass
@@ -50,8 +62,9 @@ class RateLimitExceeded(Exception):
 
 
 class RedisSlidingWindowRateLimiter:
-    def __init__(self, redis_client: Redis) -> None:
+    def __init__(self, redis_client: Redis, config: RateLimitConfig) -> None:
         self._redis = redis_client
+        self.config = config
 
     async def hit(
         self,
@@ -63,7 +76,7 @@ class RedisSlidingWindowRateLimiter:
         ttl_seconds = _window_ttl_seconds(window_seconds)
         window_ms = window_seconds * 1000
 
-        for attempt in range(max(settings.rate_limit_watch_retries, 1)):
+        for attempt in range(max(self.config.rate_limit_watch_retries, 1)):
             now_ms = int(time.time() * 1000)
             await self._redis.zremrangebyscore(key, 0, now_ms - window_ms)
 
@@ -119,7 +132,7 @@ class RedisSlidingWindowRateLimiter:
                         exceeded=False,
                     )
                 except WatchError:
-                    if attempt + 1 >= settings.rate_limit_watch_retries:
+                    if attempt + 1 >= self.config.rate_limit_watch_retries:
                         raise
                     await asyncio.sleep(min(0.01 * (2**attempt), 0.1))
 
@@ -205,23 +218,21 @@ def _build_sliding_window_result(
     )
 
 
-def init_rate_limiter(app: FastAPI) -> None:
+def init_rate_limiter(app: FastAPI, config: RateLimitConfig) -> None:
     """
     Initialize and store the rate limiter backend in app state.
     """
-    if not settings.rate_limit_enabled:
+    if not config.rate_limit_enabled:
         app.state.rate_limiter_store = None
         return
 
-    redis_pool = getattr(app.state, "redis_pool", None)
-    if redis_pool is None:
-        raise RuntimeError("Redis pool is required when rate limit is enabled")
+    redis_client = getattr(app.state, "redis_client", None)
+    if redis_client is None:
+        raise RuntimeError("Redis client is required when rate limit is enabled")
 
     app.state.rate_limiter_store = RedisSlidingWindowRateLimiter(
-        Redis(
-            connection_pool=redis_pool,
-            decode_responses=True,
-        )
+        redis_client,
+        config=config,
     )
 
 
@@ -234,13 +245,14 @@ def get_rate_limiter_store(request: Request) -> RedisSlidingWindowRateLimiter:
 
 def rate_limit(
     *,
+    config: RateLimitConfig,
     by_ip: bool | None = None,
     ip_requests: int | None = None,
     ip_window_seconds: int | None = None,
-    by_client_id: bool | None = None,
-    client_id_requests: int | None = None,
-    client_id_window_seconds: int | None = None,
-    client_id_header: str | None = None,
+    by_auth: bool | None = None,
+    auth_identifier_getter: Callable[[Request], str | None] | None = None,
+    auth_requests: int | None = None,
+    auth_window_seconds: int | None = None,
     trust_proxy_headers: bool | None = None,
 ) -> Callable[[Request], Awaitable[None]]:
     """
@@ -251,33 +263,37 @@ def rate_limit(
     """
 
     async def dependency(request: Request) -> None:
-        if not settings.rate_limit_enabled:
+        if not config.rate_limit_enabled:
             return
 
-        if _resolve_bool(by_ip, settings.rate_limit_by_ip_enabled):
+        if _resolve_bool(by_ip, config.rate_limit_by_ip_enabled):
             await _check_ip_limit(
                 request=request,
-                limit=ip_requests or settings.rate_limit_ip_requests,
+                config=config,
+                limit=ip_requests or config.rate_limit_ip_requests,
                 window_seconds=(
-                    ip_window_seconds or settings.rate_limit_ip_window_seconds
+                    ip_window_seconds or config.rate_limit_ip_window_seconds
                 ),
                 trust_proxy_headers=_resolve_bool(
                     trust_proxy_headers,
-                    settings.rate_limit_trust_proxy_headers,
+                    config.rate_limit_trust_proxy_headers,
                 ),
             )
 
-        if _resolve_bool(by_client_id, settings.rate_limit_by_client_id_enabled):
-            await _check_client_id_limit(
-                request=request,
-                limit=client_id_requests or settings.rate_limit_client_id_requests,
-                window_seconds=(
-                    client_id_window_seconds
-                    or settings.rate_limit_client_id_window_seconds
-                ),
-                client_id_header=client_id_header
-                or settings.rate_limit_client_id_header,
+        if _resolve_bool(by_auth, config.rate_limit_by_auth_enabled):
+            identifier = (
+                auth_identifier_getter(request) if auth_identifier_getter else None
             )
+            if identifier:
+                await _check_auth_limit(
+                    request=request,
+                    config=config,
+                    auth_identifier=identifier,
+                    limit=auth_requests or config.rate_limit_auth_requests,
+                    window_seconds=(
+                        auth_window_seconds or config.rate_limit_auth_window_seconds
+                    ),
+                )
 
     return dependency
 
@@ -285,11 +301,12 @@ def rate_limit(
 async def _check_ip_limit(
     *,
     request: Request,
+    config: RateLimitConfig,
     limit: int,
     window_seconds: int,
     trust_proxy_headers: bool,
 ) -> None:
-    ip_identifier = _get_client_ip(request, trust_proxy_headers)
+    ip_identifier = _get_client_ip(request, config, trust_proxy_headers)
     if not ip_identifier:
         return
 
@@ -304,30 +321,25 @@ async def _check_ip_limit(
         raise RateLimitExceeded(scope="ip", result=result)
 
 
-async def _check_client_id_limit(
+async def _check_auth_limit(
     *,
     request: Request,
+    config: RateLimitConfig,
+    auth_identifier: str,
     limit: int,
     window_seconds: int,
-    client_id_header: str,
 ) -> None:
-    client_id_identifier = _get_client_id_identifier(
-        request=request,
-        client_id_header=client_id_header,
-    )
-    if not client_id_identifier:
-        return
 
     store = get_rate_limiter_store(request)
 
-    key = _build_rate_limit_key("client", request, client_id_identifier)
+    key = _build_rate_limit_key("auth", request, auth_identifier)
     result = await store.hit(
         key=key,
         limit=limit,
         window_seconds=window_seconds,
     )
     if result.exceeded:
-        raise RateLimitExceeded(scope="client_id", result=result)
+        raise RateLimitExceeded(scope="auth", result=result)
 
 
 def _resolve_bool(value: bool | None, default: bool) -> bool:
@@ -342,9 +354,13 @@ def _rate_limit_request_scope(request: Request) -> str:
     return f"{request.method}:{route_path}"
 
 
-def _get_client_ip(request: Request, trust_proxy_headers: bool) -> str | None:
+def _get_client_ip(
+    request: Request,
+    config: RateLimitConfig,
+    trust_proxy_headers: bool,
+) -> str | None:
     if trust_proxy_headers:
-        trusted_proxy_ips = set(settings.trusted_proxy_ips)
+        trusted_proxy_ips = set(config.trusted_proxy_ips)
         if trusted_proxy_ips and (
             request.client is None or request.client.host not in trusted_proxy_ips
         ):
@@ -361,30 +377,6 @@ def _get_client_ip(request: Request, trust_proxy_headers: bool) -> str | None:
     return request.client.host if request.client else None
 
 
-def _get_client_id_identifier(
-    *,
-    request: Request,
-    client_id_header: str,
-) -> str | None:
-    header_name = client_id_header.lower()
-    client_id_value = request.headers.get(header_name)
-    if not client_id_value:
-        return None
-
-    identifier = client_id_value.strip()
-    max_identifier_length = getattr(
-        settings,
-        "rate_limit_max_identifier_length",
-        128,
-    )
-    if (
-        isinstance(max_identifier_length, int)
-        and len(identifier) > max_identifier_length
-    ):
-        return None
-    return identifier
-
-
 def _build_rate_limit_key(scope: str, request: Request, identifier: str) -> str:
-    digest = hashlib.sha256(identifier.encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(identifier.encode("utf-8")).hexdigest()[:16]
     return f"rate_limit:{scope}:{_rate_limit_request_scope(request)}:{digest}"
