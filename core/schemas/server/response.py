@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any, Literal, Mapping
 
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
@@ -36,7 +36,7 @@ class ApiResponse(JSONResponse):
         data: Any | None = None,
         extra: dict | None = None,
         traceback: str | None = None,
-        headers: dict[str, str] | None = None,
+        headers: Mapping[str, str] | None = None,
         cookie: CookieOptions | None = None,
         request_id: str | None = None,
         **kwargs,
