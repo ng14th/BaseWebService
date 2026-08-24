@@ -57,12 +57,9 @@ def get_app() -> FastAPI:
         openapi_url="/api/openapi.json" if settings.docs_enabled else None,
     )
 
-    # app.add_middleware(IdempotencyRequestMiddleware)
-    app.add_middleware(
-        LogRequestMiddleware,
-        table=TABLE_LOG_API_CALL,
-        request_partner_key=KEY_REQUEST_PARTNER,
-    )
+    setup_opentelemetry(app)
+    setup_prometheus(app, settings)
+
     app.add_middleware(
         RequestSizeLimitMiddleware,
         max_body_bytes=settings.max_request_body_bytes,
@@ -72,6 +69,12 @@ def get_app() -> FastAPI:
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=settings.allowed_hosts,
+    )
+
+    app.add_middleware(
+        LogRequestMiddleware,
+        table=TABLE_LOG_API_CALL,
+        request_partner_key=KEY_REQUEST_PARTNER,
     )
 
     # Sets all CORS enabled origins
@@ -92,6 +95,7 @@ def get_app() -> FastAPI:
         exception: Exception,
     ):
         request.state.traceback = traceback.format_exc()
+        sentry_sdk.capture_exception(exception)
         return ApiResponse(
             status_code=500,
             message="Internal server error",
@@ -111,6 +115,40 @@ def get_app() -> FastAPI:
             message=exception.message,
             data=exception.data,
             extra=exception.extra,
+        )
+
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(
+        request: Request,
+        exception: HTTPException,
+    ):
+        if isinstance(exception.detail, str):
+            message = exception.detail
+            data = []
+        elif isinstance(exception.detail, dict):
+            message = str(exception.detail.get("message", "HTTP Exception"))
+            data = exception.detail
+        else:
+            message = "HTTP Exception"
+            data = exception.detail if exception.detail is not None else []
+
+        return ApiResponse(
+            status_code=exception.status_code,
+            message=message,
+            data=data,
+            headers=exception.headers,
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def request_validation_exception_handler(
+        request: Request,
+        exception: RequestValidationError,
+    ):
+        return ApiResponse(
+            status_code=422,
+            message="Validation error",
+            data=exception.errors(),
+            extra={},
         )
 
     @app.exception_handler(RateLimitExceeded)

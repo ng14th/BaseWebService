@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.celery import CeleryInstrumentor
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from opentelemetry.propagate import set_global_textmap
 from opentelemetry.sdk.resources import (
     DEPLOYMENT_ENVIRONMENT,
@@ -22,6 +23,7 @@ from opentelemetry.trace import (
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
 from app.settings import settings
+from core.db.engine_routing import READ_ENGINE, WRITE_ENGINE
 
 _SETUP_PIDS: set[int] = set()
 
@@ -71,14 +73,20 @@ def setup_opentelemetry(app: FastAPI | None = None) -> None:
 
     set_global_textmap(TraceContextTextMapPropagator())
     if app:
-        excluded_endpoints = [
-            app.url_path_for("health_check"),
-            app.url_path_for("openapi"),
-            app.url_path_for("swagger_ui_html"),
-            app.url_path_for("swagger_ui_redirect"),
-            app.url_path_for("redoc_html"),
-            "/metrics",
-        ]
+        excluded_endpoints: list[str] = []
+        for route_name in (
+            "health_check",
+            "openapi",
+            "swagger_ui_html",
+            "swagger_ui_redirect",
+            "redoc_html",
+        ):
+            try:
+                excluded_endpoints.append(app.url_path_for(route_name))
+            except Exception:
+                pass
+        excluded_endpoints.append("/metrics")
+
         if not FastAPIInstrumentor().is_instrumented_by_opentelemetry:
             FastAPIInstrumentor().instrument_app(
                 app,
@@ -87,6 +95,11 @@ def setup_opentelemetry(app: FastAPI | None = None) -> None:
             )
 
     _instrument_once(CeleryInstrumentor(), tracer_provider=tracer_provider)
+    _instrument_once(
+        SQLAlchemyInstrumentor(),
+        engines=[WRITE_ENGINE.sync_engine, READ_ENGINE.sync_engine],
+        tracer_provider=tracer_provider,
+    )
     _SETUP_PIDS.add(process_id)
 
 

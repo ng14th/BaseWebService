@@ -48,16 +48,11 @@ def create_lifespan(settings: BaseSettings):
         :return: function that actually performs actions.
         """
 
-        app.middleware_stack = None
-        setup_opentelemetry(app)
-        setup_prometheus(app, settings)
         setup_database(app)
         init_redis(app)
         init_rate_limiter(app)
         await HttpClientManager.initialize()
-
-        app.middleware_stack = app.build_middleware_stack()
-
+        
         try:
             yield
         finally:
