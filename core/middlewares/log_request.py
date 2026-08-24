@@ -4,11 +4,11 @@ import time
 import traceback
 from datetime import datetime, timezone
 
-from fastapi import Request
 from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
+from app import constants
 from core.infra.system_log.mongo import MongoSystemEventLogger
 from core.infra.system_log.tools import (
     build_request_query_params,
@@ -21,10 +21,11 @@ from core.infra.system_log.tools import (
     serialize_for_log,
 )
 from core.logging.log import get_trace_id_span_id
-from core.utils.uuid_utils import get_uuid_v4_str
 
 WRITE_METHODS = {"PUT", "POST", "PATCH", "DELETE"}
 DEFAULT_SYSTEM_PARTNER = "Unknown"
+REQUEST_LOGGED_STATE_KEY = "_log_request_middleware_logged"
+_background_tasks: set[asyncio.Task] = set()
 
 
 class LogRequestMiddleware(BaseHTTPMiddleware):
@@ -32,21 +33,12 @@ class LogRequestMiddleware(BaseHTTPMiddleware):
     Middleware to log API calls to MongoDB.
     """
 
-    def __init__(
-        self,
-        app,
-        *,
-        table: str,
-        request_partner_key: str,
-    ) -> None:
+    def __init__(self, app, table: str, request_partner_key: str):
         super().__init__(app)
         self.table = table
         self.request_partner_key = request_partner_key
 
-    def get_request_id(self, request: Request):
-        if hasattr(request.state, "request_id"):
-            return request.state.request_id
-
+    def get_request_id(self, request):
         request_id = ""
         try:
             body_bytes = getattr(request, "_body", b"")
@@ -59,41 +51,102 @@ class LogRequestMiddleware(BaseHTTPMiddleware):
 
         if not request_id:
             request_id = request.headers.get("x-request-id", "")
-
-        if not request_id:
-            request_id = get_uuid_v4_str()
-
-        request.state.request_id = request_id
         return request_id
 
-    async def _log_api_call(
-        self,
-        request_partner: str,
-        request: Request,
-        response: Response,
-        execution_time: float,
-        table: str,
-    ):
+    async def _log_api_call(self, request_partner, request, response, execution_time):
         try:
             await self._do_log_api_call(
                 request_partner,
                 request,
                 response,
                 execution_time,
-                table,
             )
         except Exception:
             logger.warning(
                 "Failed to log API call to MongoDB: {}", traceback.format_exc()
             )
 
+    async def _log_api_call_once(
+        self,
+        request_partner,
+        request,
+        response,
+        execution_time,
+    ):
+        if getattr(request.state, REQUEST_LOGGED_STATE_KEY, False):
+            return
+        setattr(request.state, REQUEST_LOGGED_STATE_KEY, True)
+        await self._log_api_call(
+            request_partner,
+            request,
+            response,
+            execution_time,
+        )
+
+    def _log_api_call_once_in_background(
+        self,
+        request_partner,
+        request,
+        response,
+        execution_time,
+    ):
+        if getattr(request.state, REQUEST_LOGGED_STATE_KEY, False):
+            return
+        setattr(request.state, REQUEST_LOGGED_STATE_KEY, True)
+        task = asyncio.create_task(
+            self._log_api_call(
+                request_partner,
+                request,
+                response,
+                execution_time,
+            )
+        )
+        _background_tasks.add(task)
+        task.add_done_callback(_background_tasks.discard)
+
+    def _get_request_partner(self, request):
+        return (
+            getattr(request.state, "request_partner", None)
+            or getattr(request.state, "system_partner", None)
+            or DEFAULT_SYSTEM_PARTNER
+        )
+
+    def _build_error_response(self):
+        return Response(
+            content=json.dumps(
+                {
+                    "success": False,
+                    "status_code": 500,
+                    "message": "Internal server error",
+                    "data": [],
+                    "extra": {},
+                }
+            ),
+            status_code=500,
+            media_type="application/json",
+        )
+
+    def _log_response(self, request, response, execution_time):
+        response_data_logged = serialize_for_log(response)
+        logger.info(
+            "Outgoing response: {} {} | status_code={} | execution_time={:.4f}s | response={}",  # noqa
+            request.method,
+            request.url.path,
+            get_response_status_code(response),
+            execution_time,
+            (
+                response_data_logged.get("content")
+                if isinstance(response_data_logged, dict)
+                else response_data_logged
+            ),
+        )
+
     async def _do_log_api_call(
         self,
-        request_partner: str,
-        request: Request,
-        response: Response,
-        execution_time: float,
-        table: str,
+        request_partner,
+        request,
+        response,
+        execution_time,
     ):
 
         now = datetime.now(timezone.utc)
@@ -138,11 +191,11 @@ class LogRequestMiddleware(BaseHTTPMiddleware):
         }
 
         await MongoSystemEventLogger(
-            table=table,
+            table=self.table,
             body=log_data,
         ).insert_action()
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self, request, call_next):
         start_time = time.time()
         trace_id, span_id = get_trace_id_span_id()
 
@@ -152,26 +205,38 @@ class LogRequestMiddleware(BaseHTTPMiddleware):
                 await request.body()
             except Exception:
                 pass
-
-        request_id = self.get_request_id(request)
         request_data_logged = serialize_for_log(request)
+        logger.bind(trace_id=trace_id, span_id=span_id).info(
+            "Incoming request: {} {} | client_ip={} | query_params={} | body={}",
+            request.method,
+            request.url.path,
+            request_data_logged.get("client_ip"),
+            request_data_logged.get("query_params", {}),
+            request_data_logged.get("body"),
+        )
 
-        with logger.contextualize(
-            trace_id=trace_id, span_id=span_id, request_id=request_id
-        ):
-            logger.info(
-                "Incoming request: {} {} | client_ip={} | query_params={} | body={}",
-                request.method,
-                request.url.path,
-                request_data_logged.get("client_ip"),
-                request_data_logged.get("query_params", {}),
-                request_data_logged.get("body"),
-            )
-
+        try:
             response = await call_next(request)
+        except Exception:
+            request.state.traceback = traceback.format_exc()
+            execution_time = time.time() - start_time
+            response = self._build_error_response()
+            logger.exception(
+                "Unhandled exception: {exception} | path={path}",
+                exception=request.state.traceback,
+                path=request.url.path,
+            )
+            self._log_response(request, response, execution_time)
+            await self._log_api_call_once(
+                self._get_request_partner(request),
+                request,
+                response,
+                execution_time,
+            )
+            return response
 
         execution_time = time.time() - start_time
-        request_partner = DEFAULT_SYSTEM_PARTNER
+        request_partner = self._get_request_partner(request)
 
         # To log the response body without 'transforming' it, we must still
         # consume the stream and recreate the response object.
@@ -183,15 +248,14 @@ class LogRequestMiddleware(BaseHTTPMiddleware):
                 response_content = json.loads(full_body.decode("utf-8"))
                 extra = response_content.get("extra", {})
                 request_partner = (
-                    extra.get(self.request_partner_key) or DEFAULT_SYSTEM_PARTNER
+                    extra.get(constants.KEY_REQUEST_PARTNER) or request_partner
                 )
             except Exception:
-                request_partner = DEFAULT_SYSTEM_PARTNER
+                pass
 
             # Recreate response with EXACTLY the same status and content
             headers = dict(response.headers)
-            if not headers.get("x-request-id"):
-                headers["x-request-id"] = self.get_request_id(request)
+            headers["x-request-id"] = self.get_request_id(request)
             headers.pop("content-length", None)
             response = Response(
                 content=full_body,
@@ -199,16 +263,15 @@ class LogRequestMiddleware(BaseHTTPMiddleware):
                 headers=headers,
                 media_type=response.media_type,
             )
+        # log response here
+        self._log_response(request, response, execution_time)
 
         # log to mongo in background
-        asyncio.create_task(
-            self._log_api_call(
-                request_partner,
-                request,
-                response,
-                execution_time,
-                self.table,
-            )
+        self._log_api_call_once_in_background(
+            request_partner,
+            request,
+            response,
+            execution_time,
         )
 
         return response
