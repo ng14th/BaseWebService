@@ -128,18 +128,23 @@ class LogRequestMiddleware(BaseHTTPMiddleware):
 
     def _log_response(self, request, response, execution_time):
         response_data_logged = serialize_for_log(response)
+        content = (
+            response_data_logged.get("content")
+            if isinstance(response_data_logged, dict)
+            else response_data_logged
+        )
+        content_str = str(content)
+        if len(content_str) > 100:
+            content_str = content_str[:100] + "..."
         logger.info(
             "Outgoing response: {} {} | status_code={} | execution_time={:.4f}s | response={}",  # noqa
             request.method,
             request.url.path,
             get_response_status_code(response),
             execution_time,
-            (
-                response_data_logged.get("content")
-                if isinstance(response_data_logged, dict)
-                else response_data_logged
-            ),
+            content_str,
         )
+
 
     async def _do_log_api_call(
         self,

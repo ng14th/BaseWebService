@@ -23,6 +23,13 @@ class RequestSizeLimitMiddleware:
             return
 
         received_bytes = 0
+        response_started = False
+
+        async def send_wrapper(message):
+            nonlocal response_started
+            if message["type"] == "http.response.start":
+                response_started = True
+            await send(message)
 
         async def limited_receive():
             nonlocal received_bytes
@@ -34,9 +41,11 @@ class RequestSizeLimitMiddleware:
             return message
 
         try:
-            await self.app(scope, limited_receive, send)
+            await self.app(scope, limited_receive, send_wrapper)
         except RequestTooLarge:
-            await _too_large_response(scope, receive, send)
+            if not response_started:
+                await _too_large_response(scope, receive, send)
+
 
 
 def _content_length(headers) -> int | None:

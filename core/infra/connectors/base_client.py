@@ -178,5 +178,9 @@ class BaseAsyncHttpConnector:
             execute_time_ms=execute_time_ms,
             source_service=self.source_service,
         )
-        await self._circuit_breaker.record_success()
+        if response.status_code >= 500 or response.status_code == 429:
+            await self._circuit_breaker.record_failure()
+        else:
+            await self._circuit_breaker.record_success()
         return result
+

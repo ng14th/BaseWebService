@@ -15,10 +15,18 @@ class BaseRepository:
         self.session = session or AutoSession.get()
 
     @staticmethod
-    def _audit_entity_fields(model: object) -> dict[str, str | None]:
+    def _audit_entity_fields(model: object | None) -> dict[str, str | None]:
+        if model is None:
+            return {
+                "created_by": None,
+                "updated_by": None,
+                "time_created": None,
+                "time_updated": None,
+            }
         return {
             "created_by": getattr(model, "created_by", None),
             "updated_by": getattr(model, "updated_by", None),
             "time_created": getattr(model, "get_time_created", None) or None,
             "time_updated": getattr(model, "get_time_updated", None) or None,
         }
+

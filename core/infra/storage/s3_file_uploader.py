@@ -44,7 +44,7 @@ class S3FileUploader:
 
     def _build_public_url(self, file_name: str) -> str:
         safe_file_name = quote(file_name.lstrip("/"), safe="/")
-        return f"{self.endpoint_url}/{self.space_name}/einvoice/{safe_file_name}"
+        return f"{self.endpoint_url}/{self.space_name}/{safe_file_name}"
 
     async def upload_file_content(
         self,

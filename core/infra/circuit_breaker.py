@@ -98,15 +98,14 @@ class RedisCircuitBreaker:
             )
             return CircuitBreakerDecision(allowed=True, mode="closed")
 
-    async def record_timeout(self) -> None:
+    async def record_failure(self) -> None:
         if not self._is_enabled():
             return
 
         try:
-
-            mode = await self.redis.hget(self._key, "mode") or "closed"
+            mode = await self.redis.hget(self._key, "mode") or MODE_CLOSED
             now_ms = self._now_ms()
-            if mode == "half_open":
+            if mode == MODE_HALF_OPEN:
                 # A failed recovery probe immediately returns the breaker to OPEN.
                 await self._open(now_ms)
                 return
@@ -117,20 +116,20 @@ class RedisCircuitBreaker:
             cached_failure_count = await self.redis.hget(self._key, "failure_count")
             failures = self._as_int(str(cached_failure_count))
             if now_ms - last_timeout_ms > self._config.timeout_window_seconds * 1000:
-                # The previous timeout is too old to count toward this outage.
+                # The previous failure is too old to count toward this outage.
                 failures = 1
             else:
                 failures += 1
 
             if failures >= self._config.timeout_threshold:
-                # Repeated recent timeouts indicate an outage: stop sending traffic.
+                # Repeated recent failures indicate an outage: stop sending traffic.
                 await self._open(now_ms, failures)
                 return
 
-            # Keep the breaker closed while the timeout threshold has not been reached.
+            # Keep the breaker closed while the failure threshold has not been reached.
             await self._hset_state(
                 mapping={
-                    "mode": "closed",
+                    "mode": MODE_CLOSED,
                     "failure_count": failures,
                     "last_timeout_ms": now_ms,
                 },
@@ -141,6 +140,10 @@ class RedisCircuitBreaker:
                 service=self._key,
                 error=str(exc),
             )
+
+    async def record_timeout(self) -> None:
+        await self.record_failure()
+
 
     async def record_success(self) -> None:
         if not self._is_enabled():
