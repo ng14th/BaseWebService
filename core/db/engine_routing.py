@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from typing import Any
 
@@ -76,3 +77,17 @@ engine_factory = EngineFactory(settings.environment)
 logger.info("Creating database engines at import time (READ_ENGINE/WRITE_ENGINE).")
 WRITE_ENGINE: AsyncEngine = engine_factory.create_write_engine()
 READ_ENGINE: AsyncEngine = engine_factory.create_read_engine()
+
+
+async def dispose_engines() -> None:
+    """Dispose global SQLAlchemy engines with a safe timeout."""
+    for name, engine in (("WRITE_ENGINE", WRITE_ENGINE), ("READ_ENGINE", READ_ENGINE)):
+        try:
+            await asyncio.wait_for(engine.dispose(), timeout=2.0)
+        except (TimeoutError, asyncio.TimeoutError):
+            logger.warning(
+                f"Timeout disposing {name} after 2.0s (stale connection), skipping."
+            )
+        except Exception as exc:
+            logger.warning(f"Error disposing {name}: {exc}")
+

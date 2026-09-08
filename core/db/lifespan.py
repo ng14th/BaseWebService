@@ -1,7 +1,11 @@
 from fastapi import FastAPI
 from loguru import logger
 
-from core.db.engine_routing import READ_ENGINE, WRITE_ENGINE
+from core.db.engine_routing import (
+    READ_ENGINE,
+    WRITE_ENGINE,
+    dispose_engines,
+)
 from core.db.session import AsyncAutoSession, AsyncReadSession, AsyncWriteSession
 
 
@@ -13,7 +17,4 @@ def setup_database(app: FastAPI) -> None:  # pragma: no cover
     logger.info("Database session factories initialized")
 
 
-async def dispose_engines() -> None:
-    """Dispose global SQLAlchemy engines."""
-    await WRITE_ENGINE.dispose()
-    await READ_ENGINE.dispose()
+__all__ = ["setup_database", "dispose_engines"]
