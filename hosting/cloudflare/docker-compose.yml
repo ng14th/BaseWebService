@@ -1,0 +1,12 @@
+services:
+  cloudflared-staging:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-staging
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - TUNNEL_TOKEN=${TOKEN_CF_TUNNEL}
+    command: tunnel --no-autoupdate run --token ${TOKEN_CF_TUNNEL}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

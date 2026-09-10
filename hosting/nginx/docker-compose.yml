@@ -1,0 +1,12 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-gateway
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      # File default.conf có chứa khối events và http nên được mount vào /etc/nginx/nginx.conf
+      - ./conf.d/default.conf:/etc/nginx/nginx.conf:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
