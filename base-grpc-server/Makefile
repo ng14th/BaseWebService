@@ -14,7 +14,7 @@ init-project:
 	$(POETRY_RUN) pre-commit install-hooks
 
 start-grpc-server:
-	$(POETRY_RUN) python -m core.grpc_server.server
+	$(POETRY_RUN) python -m app.main
 
 proto: proto-gen
 
@@ -39,3 +39,15 @@ test:
 
 open-test-coverage:
 	open tests/htmlcov/coverage/index.html
+
+# CLEAN UP
+.PHONY: clean-up-pycache
+
+clean-up-pycache:
+	find . \
+  \( -name "__pycache__" \
+  -o -name ".ruff_cache" \
+  -o -name ".pytest_cache" \
+  -o -name ".mypy_cache" \
+  -o -name ".coverage" \) \
+  -exec rm -rf {} +

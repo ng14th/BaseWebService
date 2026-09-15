@@ -35,6 +35,10 @@ class GrpcServer:
         )
 
     @property
+    def server(self) -> grpc.aio.Server:
+        return self._server  # pragma: no cover
+
+    @property
     def address(self) -> str:
         return f"{self._host}:{self._port}"
 
