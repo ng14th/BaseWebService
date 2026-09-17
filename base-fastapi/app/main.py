@@ -4,6 +4,8 @@ from pathlib import Path
 
 import uvicorn
 from app.settings import settings
+from dotenv import load_dotenv
+
 from core.fastapi_server.gunicorn_runner import GunicornApplication
 
 
@@ -20,6 +22,7 @@ def set_multiproc_dir() -> None:
 
 
 def main() -> None:
+    load_dotenv()
     set_multiproc_dir()
     if settings.reload:
         uvicorn.run(

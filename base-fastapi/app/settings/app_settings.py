@@ -3,10 +3,6 @@ from pathlib import Path
 from tempfile import gettempdir
 from typing import Optional
 
-from pydantic import field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from yarl import URL
-
 from app.settings.app_security import Security
 from app.settings.celery_setting import CelerySetting
 from app.settings.circuit_breaker_setting import CircuitBreakerSetting
@@ -16,6 +12,9 @@ from app.settings.http_client_setting import HttpClientSetting
 from app.settings.mongo_setting import MongoSetting
 from app.settings.rate_limit_setting import RateLimitSetting
 from app.settings.redis_setting import RedisSetting
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from yarl import URL
 
 TEMP_DIR = Path(gettempdir())
 
@@ -48,6 +47,7 @@ class Settings(
 
     environment: str = "dev"
     log_level: LogLevel = LogLevel.INFO
+    enable_log_sql: Optional[bool] = False
 
     prometheus_dir: Path = TEMP_DIR / "prom"
 
