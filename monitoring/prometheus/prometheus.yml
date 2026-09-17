@@ -44,8 +44,7 @@ scrape_configs:
       module: [http_2xx]
     static_configs:
       - targets:
-          - "http://host.docker.internal:8888/health"
-          - "http://host.docker.internal:8888/"
+          - "http://host.docker.internal:8888/api/v1/health"
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
