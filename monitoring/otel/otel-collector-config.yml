@@ -1,0 +1,66 @@
+# OpenTelemetry Collector – onflow monitoring stack
+# Nhận OTLP từ tms-core (và các service khác), export ra Prometheus + logs
+
+# ── Receivers ──────────────────────────────────────────────────────────────
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"   # tms-core → OPENTELEMETRY_ENDPOINT
+      http:
+        endpoint: "0.0.0.0:4318"
+
+# ── Processors ─────────────────────────────────────────────────────────────
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+
+  # Thêm resource attributes mặc định
+  resource:
+    attributes:
+      - key: env
+        value: "onflow"
+        action: upsert
+
+# ── Exporters ──────────────────────────────────────────────────────────────
+exporters:
+  # Debug logs (tắt trên production, dùng để verify)
+  debug:
+    verbosity: normal
+
+  # OTLP Exporter đẩy traces sang Jaeger
+  otlp/jaeger:
+    endpoint: "jaeger:4317"
+    tls:
+      insecure: true
+
+  # Prometheus exporter – Prometheus sẽ scrape tại :8889/metrics
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: "otel"
+    resource_to_telemetry_conversion:
+      enabled: true   # convert resource attrs thành labels
+
+# ── Extensions ─────────────────────────────────────────────────────────────
+extensions:
+  health_check:
+    endpoint: "0.0.0.0:13133"
+  pprof:
+    endpoint: "0.0.0.0:1777"
+
+# ── Service Pipelines ───────────────────────────────────────────────────────
+service:
+  extensions: [health_check, pprof]
+  pipelines:
+    # Traces: tms-core OTLP traces → Jaeger
+    traces:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [debug, otlp/jaeger]
+
+    # Metrics: tms-core OTLP metrics → Prometheus scrape
+    metrics:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [prometheus]

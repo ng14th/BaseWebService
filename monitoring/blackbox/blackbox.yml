@@ -1,0 +1,37 @@
+modules:
+
+  # ── HTTP 2xx – check endpoint trả về HTTP 200-299 ───────────────────────────
+  http_2xx:
+    prober: http
+    timeout: 10s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: []        # default: 2xx
+      method: GET
+      follow_redirects: true
+      preferred_ip_protocol: "ip4"
+      tls_config:
+        insecure_skip_verify: true  # bỏ qua SSL verify khi test local
+
+  # ── HTTP POST – probe write endpoints ────────────────────────────────────────
+  http_post_2xx:
+    prober: http
+    timeout: 10s
+    http:
+      method: POST
+      valid_status_codes: [200, 201, 202, 204]
+      preferred_ip_protocol: "ip4"
+
+  # ── TCP Connect – kiểm tra port mở (dùng cho gRPC) ──────────────────────────
+  tcp_connect:
+    prober: tcp
+    timeout: 10s
+    tcp:
+      preferred_ip_protocol: "ip4"
+
+  # ── ICMP Ping ────────────────────────────────────────────────────────────────
+  icmp:
+    prober: icmp
+    timeout: 5s
+    icmp:
+      preferred_ip_protocol: "ip4"
