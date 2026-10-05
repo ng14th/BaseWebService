@@ -1,62 +1,41 @@
 from datetime import timezone as dt_timezone
 
-# from celery.schedules import crontab
-from kombu import Exchange, Queue
-
+from app.celery.beat import beat_schedule  # noqa
+from app.celery.queues import task_queues  # noqa
+from app.celery.routing import task_routes  # noqa
 from app.settings import settings
 
 redis_url = str(settings.redis_url)
 
-CELERY_BROKER_URL = redis_url
+# Redis
+broker_url = redis_url
 result_backend = redis_url
-accept_content = ["application/json"]
 
+
+# Serialization
+accept_content = ["json"]
+task_serializer = "json"
+result_serializer = "json"
+
+# Timezone
 timezone = dt_timezone.utc
+enable_utc = True
+
+# Result
 result_extended = True
+task_ignore_result = False
 
+# Worker
+worker_pool_restarts = True
+worker_send_task_events = True
 
-CELERY_POOL_RESTARTS = True
-CELERY_TASK_IGNORE_RESULT = False
-CELERY_TASK_SOFT_TIME_LIMIT = 10800  # seconds
-CELERY_TASK_TIME_LIMIT = 10800  # seconds
+# Task
+task_send_sent_event = True
+task_soft_time_limit = 10800
+task_time_limit = 10800
 
-CELERY_TASK_DEFAULT_EXCHANGE = settings.celery_default_queue
-CELERY_TASK_DEFAULT_QUEUE = settings.celery_default_queue
-CELERY_TASK_DEFAULT_ROUTING_KEY = settings.celery_default_queue
-
-CELERY_TASK_CREATE_MISSING_QUEUES = False
-
-CELERY_WORKER_SEND_TASK_EVENTS = True
-CELERY_TASK_SEND_SENT_EVENT = True
-
-
-# TASK_DAILY_METRICS_ROLLUP = {
-#     "xx": {
-#         "task": "xx",
-#         "schedule": crontab(minute="0", hour="18"),  # 01:00 AM VN
-#         "options": {"queue": CELERY_TASK_DEFAULT_QUEUE},
-#         "args": {},
-#     },
-# }
-
-
-CELERY_BEAT_SCHEDULE = {
-    # **TASK_DAILY_METRICS_ROLLUP,
-}
-
-CELERY_TASK_QUEUES = (
-    Queue(
-        CELERY_TASK_DEFAULT_QUEUE,
-        Exchange(
-            CELERY_TASK_DEFAULT_EXCHANGE,
-            # The delivery_mode changes how the messages to this queue are delivered.
-            # A value of one means that the message won’t be written to disk,
-            # and a value of two (default) means that the message can be written to disk.
-            delivery_mode=2,
-        ),
-        routing_key=CELERY_TASK_DEFAULT_ROUTING_KEY,
-        # Durable exchanges are persistent (i.e., they survive a broker restart).
-        durable=True,
-    ),
-    Queue(),
-)
+task_default_exchange = settings.celery_default_queue
+task_default_exchange_type = "direct"
+task_default_queue = settings.celery_default_queue
+task_default_routing_key = settings.celery_default_queue
+task_create_missing_queues = False

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import os
+from contextlib import suppress
 from typing import Any, Awaitable
 
 from celery import Celery
@@ -18,11 +19,8 @@ app = Celery(settings.celery_app_name)
 # Set env variable for celery worker using NullPool instead of default pool
 os.environ.setdefault("CELERY_WORKER", "1")
 
-app.config_from_object("app.celery.config", namespace="CELERY")
+app.config_from_object("app.celery.config")
 
-app.conf.task_default_queue = settings.celery_default_queue
-app.conf.task_default_exchange_type = "direct"
-app.conf.task_default_routing_key = settings.celery_default_queue
 app.conf.task_queue_max_priority = 10
 app.conf.task_default_priority = 5
 
@@ -31,10 +29,6 @@ app.conf.update(
     worker_redirect_stdouts=False,
 )
 
-# default routing
-app.conf.task_routes = {
-    "*": {"queue": settings.celery_default_queue},
-}
 
 app.autodiscover_tasks(["app.celery"], related_name="tasks")
 
@@ -154,8 +148,18 @@ def run_async(coro: Awaitable[Any]) -> Any:
     avoiding the "Event loop is closed" error and dramatically boosting performance.
     """
     loop = get_worker_loop()
-
     if loop.is_running():
+        coro.close()  # type: ignore
         raise RuntimeError("Celery worker event loop is already running")
-
-    return loop.run_until_complete(coro)
+    task = loop.create_task(coro)  # type: ignore
+    try:
+        return loop.run_until_complete(task)
+    except BaseException:
+        # e.g. SoftTimeLimitExceeded raised by the signal handler while the
+        # loop is waiting: cancel the coroutine so its session/connection is
+        # closed instead of being left pending on the reused loop.
+        if not task.done():
+            task.cancel()
+            with suppress(BaseException):
+                loop.run_until_complete(task)
+        raise
