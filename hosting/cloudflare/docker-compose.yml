@@ -7,6 +7,6 @@ services:
       - .env
     environment:
       - TUNNEL_TOKEN=${TOKEN_CF_TUNNEL}
-    command: tunnel --no-autoupdate run --token ${TOKEN_CF_TUNNEL}
+    command: tunnel --no-autoupdate --protocol http2 run --token ${TOKEN_CF_TUNNEL}
     extra_hosts:
       - "host.docker.internal:host-gateway"

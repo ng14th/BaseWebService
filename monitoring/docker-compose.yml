@@ -130,6 +130,34 @@ services:
     networks:
       - monitoring
 
+  # ─── Loki (Log Aggregation) ──────────────────────────────────────────────
+  loki:
+    image: grafana/loki:3.1.0
+    container_name: onflow-loki
+    user: "0:0"
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/tmp/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - monitoring
+
+  # ─── Promtail (Log Collector) ────────────────────────────────────────────
+  promtail:
+    image: grafana/promtail:3.1.0
+    container_name: onflow-promtail
+    restart: unless-stopped
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/promtail-config.yml
+    networks:
+      - monitoring
+
   # ─── PostgreSQL Exporter (DB Metrics) ────────────────────────────────────
   postgres_exporter:
     image: prometheuscommunity/postgres-exporter:v0.15.0
@@ -148,6 +176,7 @@ services:
 volumes:
   prometheus_data:
   grafana_data:
+  loki_data:
 
 networks:
   monitoring:
