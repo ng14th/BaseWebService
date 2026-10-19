@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
-import asyncio
+# Set env variable for celery worker using NullPool instead of default pool.
+# Must run BEFORE importing core.db.*: READ/WRITE engines are created at import time.
 import os
+
+os.environ.setdefault("CELERY_WORKER", "1")
+
+import asyncio
 from contextlib import suppress
 from typing import Any, Awaitable
 
@@ -15,9 +20,6 @@ from core.infra.system_log.mongo import MongoClientSingleton
 from core.logging.log import configure_logging
 
 app = Celery(settings.celery_app_name)
-
-# Set env variable for celery worker using NullPool instead of default pool
-os.environ.setdefault("CELERY_WORKER", "1")
 
 app.config_from_object("app.celery.config")
 

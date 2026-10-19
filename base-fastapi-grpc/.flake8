@@ -1,2 +1,5 @@
 [flake8]
 max-line-length = 90
+
+per-file-ignores =
+    app/celery/celery.py: E402
